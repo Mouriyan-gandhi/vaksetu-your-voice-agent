@@ -140,8 +140,21 @@ flowchart TD
 
 ## ✨ Key Features
 
-### 🗣️ Code-Mixed Conversation Handling
-Supports multilingual flow with practical handling of Hindi/English mix and regional language responses.
+### 🗣️ Multi-Script & Code-Mixed Dynamic Language Switching
+Supports seamless turn-by-turn language switching across 11 major Indic languages (Hindi, Kannada, Tamil, Telugu, Malayalam, Bengali, Marathi, Gujarati, Punjabi, Odia) and English. Includes a Unicode-based script detector in `tts.py` that identifies script block boundaries and handles Hinglish code-switching to change TTS voices dynamically mid-session.
+
+### ⚡ Parallel Execution Loop (Low Latency)
+To keep phone interactions responsive, the dialogue agent executes `SmartExtractor` (structured data collection) and `SmartDialogueAgent` (conversational response generation) in parallel using `asyncio.gather`. This architecture cuts total response latency in half, reducing turnaround times from ~60s down to ~30s.
+
+### 🎙️ Barge-In & Interruption Support
+*   **Twilio calls**: Configured with nested TwiML gather tags and `barge_in=True` in `webhook_server.py`, so the call immediately silences the AI speaker and starts STT recording the moment the caller speaks.
+*   **Browser Playground**: Triggers browser synthesis cancel (`window.speechSynthesis.cancel()`) on typing or microphonic events in the Next.js frontend to dynamically interrupt the audio stream.
+
+### 🧠 Reasoning Token Headroom & Think-tag Stripper
+Integrated support for deep reasoning models (like `sarvam-30b`) by expanding `max_tokens` headroom to `4096` and implementing a robust trimming parser that cleans `<think>...</think>` tags (including truncated unclosed tags) and outputs safe conversational fallbacks.
+
+### 🏥 Simplified Clinical Manager (Aarogya Sahayak)
+Configured under `configs/healthcare.yaml` to triage patient cases naturally. Collects 7 core fields: `patient_name`, `age`, `gender`, `symptoms`, `symptom_duration`, `risk_level`, and `appointment_date_time`.
 
 ### 🔄 Config-Driven Domain Control
 Domain behavior is governed by `configs/healthcare.yaml` and `configs/financial.yaml` plus dynamic agent settings from the Build UI.
@@ -153,9 +166,7 @@ Completed sessions can be scored on politeness, accuracy, fluency, policy, and r
 Agents, sessions, messages, collected fields, and reward results are persisted and retrievable from API routes.
 
 ### 🖥️ Analysis Operations Dashboard
-`/analysis` now provides CRUD for both:
-- Agents database records
-- Live interaction sessions
+`/analysis` provides CRUD operations for agents and live interaction sessions.
 
 ### 📞 Autonomous Outbound Calling with Auto-Documentation
 Twilio routes support initiating calls, streaming media, and retrieving call summaries after completion.

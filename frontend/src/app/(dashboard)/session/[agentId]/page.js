@@ -264,7 +264,7 @@ export default function SessionPage() {
       setSessionId(data.session_id);
       setMissingFields(data.missing_fields || []);
 
-      const lang = data.agent?.default_language || "hi-IN";
+      const lang = data.language_code || data.agent?.default_language || "hi-IN";
       const msg  = { role: "assistant", content: data.greeting, audio: data.greeting_audio, lang };
       setMessages([msg]);
 
@@ -280,7 +280,7 @@ export default function SessionPage() {
   };
 
   // ── Send Message ────────────────────────────────────────────────
-  const sendMessage = async (text) => {
+  const sendMessage = async (text, languageCode = null) => {
     if (!text.trim() || !sessionId || sending) return;
     unlockAndPlay();     // ensure audio is unlocked on send
     tts.stop();          // stop agent speaking when user sends
@@ -293,12 +293,12 @@ export default function SessionPage() {
       const res = await fetch(`${API_DIRECT}/sessions/${sessionId}/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: text.trim(), input_type: "text" }),
+        body: JSON.stringify({ content: text.trim(), input_type: "text", language_code: languageCode }),
       });
       if (!res.ok) throw new Error("Send failed");
       const data = await res.json();
 
-      const lang    = agent?.default_language || "hi-IN";
+      const lang    = data.language_code || agent?.default_language || "hi-IN";
       const asstMsg = { role: "assistant", content: data.response, audio: data.response_audio, lang };
       setMessages(prev => [...prev, asstMsg]);
       setCollectedFields(data.collected_fields || {});
@@ -364,7 +364,7 @@ export default function SessionPage() {
       if (!res.ok) throw new Error("Transcription failed");
       const data = await res.json();
       if (data.transcript) {
-        await sendMessage(data.transcript);
+        await sendMessage(data.transcript, data.language_code);
       } else {
         setError("Could not transcribe. Please type instead.");
         setSending(false);

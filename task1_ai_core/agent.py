@@ -97,7 +97,7 @@ class SmartDialogueAgent:
             self._llm = ChatOpenAI(
                 model=SARVAM_CHAT_MODEL,
                 temperature=SARVAM_CHAT_TEMPERATURE,
-                max_tokens=1024,  # Sarvam-M uses reasoning tokens, needs headroom
+                max_tokens=4096,  # Sarvam-M uses reasoning tokens, needs headroom
                 api_key=SARVAM_API_KEY,
                 base_url=SARVAM_CHAT_BASE_URL,
             )
@@ -204,7 +204,11 @@ class SmartDialogueAgent:
             try:
                 llm = self._get_llm()
                 response = await asyncio.to_thread(llm.invoke, messages)
-                return self._strip_think_tags(response.content)
+                raw_content = response.content
+                logger.info(f"🤖 [RAW LLM RESPONSE]: {raw_content!r}")
+                stripped = self._strip_think_tags(raw_content)
+                logger.info(f"🤖 [STRIPPED LLM RESPONSE]: {stripped!r}")
+                return stripped
             except Exception as e:
                 logger.error(f"LLM call failed: {e}")
                 return "Maaf kijiye, mujhe abhi thodi technical problem aa rahi hai. Kya aap dobara keh sakte hain?"
@@ -327,10 +331,19 @@ Based on the conversation so far, naturally collect the next missing field. When
 
     @staticmethod
     def _strip_think_tags(text: str) -> str:
-        """Strip <think>...</think> reasoning tokens from Sarvam-M responses."""
+        """Strip <think>...</think> reasoning tokens from Sarvam-M responses robustly."""
         import re
+        # First, strip fully closed think tags
         cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-        return cleaned.strip()
+        # If there is a dangling <think> tag that wasn't closed, strip everything after it
+        if "<think>" in cleaned:
+            cleaned = cleaned.split("<think>")[0]
+        cleaned = cleaned.strip()
+        # Fallback if the model only generated thinking and no user-facing response
+        if not cleaned and text.strip():
+            logging.getLogger(__name__).warning("LLM response contained only reasoning. Returning fallback response.")
+            return "Kripya mujhe aur batayein, main sun raha hoon."
+        return cleaned
 
     def _get_or_create_session(self, session_id: str, agent_config: dict) -> dict:
         """Get existing session state or create one."""

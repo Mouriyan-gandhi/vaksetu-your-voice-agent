@@ -22,7 +22,7 @@ load_dotenv(PROJECT_ROOT / ".env")
 SARVAM_API_KEY: str = os.getenv("SARVAM_API_KEY", "")
 SARVAM_STT_MODEL: str = "saaras:v3"        # Latest SOTA model
 SARVAM_STT_MODE: str = "transcribe"         # transcribe | translate | codemix
-SARVAM_CHAT_MODEL: str = "sarvam-m"         # sarvam-m | sarvam-30b | sarvam-105b
+SARVAM_CHAT_MODEL: str = "sarvam-30b"         # sarvam-m | sarvam-30b | sarvam-105b
 SARVAM_CHAT_BASE_URL: str = "https://api.sarvam.ai/v1"
 
 # ── HuggingFace token for Diarization ─────────────────────────

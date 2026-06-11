@@ -45,6 +45,7 @@ class StartSessionRequest(BaseModel):
 class SendMessageRequest(BaseModel):
     content: str
     input_type: str = "text"  # "text" or "voice"
+    language_code: Optional[str] = None
 
 
 class SessionUpdateRequest(BaseModel):
@@ -129,7 +130,8 @@ async def api_start_session(req: StartSessionRequest):
     # Synthesise greeting audio (non-blocking; None if Sarvam TTS unavailable)
     greeting_audio_b64 = None
     try:
-        lang = agent.get("default_language", "hi-IN")
+        from task1_ai_core.tts import detect_language_code
+        lang = detect_language_code(greeting_response.response) or agent.get("default_language", "hi-IN")
         greeting_audio_b64 = await _get_tts().synthesise_b64(
             greeting_response.response, language_code=lang
         )
@@ -144,6 +146,7 @@ async def api_start_session(req: StartSessionRequest):
         "greeting_audio": greeting_audio_b64,   # base64 WAV or null
         "missing_fields": greeting_response.missing_fields,
         "agent": agent,
+        "language_code": lang,
     }
 
 
@@ -206,8 +209,14 @@ async def api_send_message(session_id: str, req: SendMessageRequest):
 
     # Synthesise response audio
     response_audio_b64 = None
+    lang = agent.get("default_language", "hi-IN")
     try:
-        lang = agent.get("default_language", "hi-IN")
+        from task1_ai_core.tts import detect_language_code
+        detected_lang = detect_language_code(response.response)
+        
+        # Use detected language if found, otherwise request language, otherwise agent default
+        lang = detected_lang or req.language_code or lang
+        
         response_audio_b64 = await _get_tts().synthesise_b64(
             response.response, language_code=lang
         )
@@ -229,6 +238,7 @@ async def api_send_message(session_id: str, req: SendMessageRequest):
         "is_complete": response.is_complete,
         "is_escalation": response.is_escalation,
         "turn_number": turn,
+        "language_code": lang,
     }
 
 
@@ -332,7 +342,7 @@ async def api_end_session(session_id: str):
 class TTSRequest(BaseModel):
     text: str
     language_code: str = "hi-IN"
-    speaker: str = "meera"
+    speaker: str = "anushka"
 
 
 @router.post("/tts")

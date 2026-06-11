@@ -45,7 +45,7 @@ class SmartExtractor:
             self._llm = ChatOpenAI(
                 model=SARVAM_CHAT_MODEL,
                 temperature=0.1,  # Low temp for consistent extraction
-                max_tokens=1024,  # Sarvam-M uses reasoning tokens
+                max_tokens=4096,  # Sarvam-M uses reasoning tokens
                 api_key=SARVAM_API_KEY,
                 base_url=SARVAM_CHAT_BASE_URL,
             )
@@ -115,21 +115,17 @@ If nothing is extractable, return: {{}}"""
             import re
             content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
 
-            # Strip markdown code blocks if present
-            if content.startswith("```"):
-                lines = content.split("\n")
-                content = "\n".join(lines[1:-1])
-            if content.startswith("{") and content.endswith("}"):
-                extracted = json.loads(content)
-            else:
-                # Try to find JSON in the response
-                start = content.find("{")
-                end = content.rfind("}") + 1
-                if start >= 0 and end > start:
-                    extracted = json.loads(content[start:end])
-                else:
-                    logger.warning(f"No JSON found in extraction response: {content[:100]}")
+            # Robust JSON extraction using regex
+            json_match = re.search(r"\{.*\}", content, re.DOTALL)
+            if json_match:
+                try:
+                    extracted = json.loads(json_match.group())
+                except json.JSONDecodeError:
+                    logger.warning(f"Failed to decode extracted JSON block: {json_match.group()}")
                     extracted = {}
+            else:
+                logger.warning(f"No JSON block found in extraction response: {content[:100]}")
+                extracted = {}
 
             # Filter to only valid fields
             valid_extracted = {}

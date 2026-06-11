@@ -16,8 +16,53 @@ from task1_ai_core.config import SARVAM_API_KEY
 
 logger = logging.getLogger("vaaksetu.tts")
 
-DEFAULT_VOICE    = "hitesh"
+DEFAULT_VOICE    = "anushka"
 DEFAULT_LANGUAGE = None  # Initially None; detected dynamically on first pass
+
+def detect_language_code(text: str) -> str:
+    """
+    Detect the target language code for a given text.
+    Handles Indic script detection and falls back to Latin script language detection.
+    """
+    if not text or not text.strip():
+        return "hi-IN"
+
+    text = text.strip()
+
+    # 1. Native Character Precedence
+    if any('\u0B80' <= c <= '\u0BFF' for c in text): return 'ta-IN'
+    elif any('\u0900' <= c <= '\u097F' for c in text): return 'hi-IN'
+    elif any('\u0C00' <= c <= '\u0C7F' for c in text): return 'te-IN'
+    elif any('\u0980' <= c <= '\u09FF' for c in text): return 'bn-IN'
+    elif any('\u0C80' <= c <= '\u0CFF' for c in text): return 'kn-IN'
+    elif any('\u0D00' <= c <= '\u0D7F' for c in text): return 'ml-IN'
+    elif any('\u0A80' <= c <= '\u0AFF' for c in text): return 'gu-IN'
+    elif any('\u0B00' <= c <= '\u0B7F' for c in text): return 'od-IN'
+    elif any('\u0A00' <= c <= '\u0A7F' for c in text): return 'pa-IN'
+
+    # 2. Latin Script Fallback (English / Hinglish / Tanglish)
+    try:
+        from langdetect import detect
+        
+        # Simple heuristic for Romanized Hindi (Hinglish)
+        hinglish_words = {'hai','hain','ki','ko','se','aur','mein','ka','ke','kya','aap','nahi','yeh','woh','karo','kar','raha','rahi','hoon','hu','mera','tum','tumhara','kaise','bukhar','kripya','bataiye','madad'}
+        words = set(text.lower().replace(',','').replace('?','').replace('.','').split())
+        if len(words.intersection(hinglish_words)) >= 2:
+            detected_iso = 'hi'
+        else:
+            detected_iso = detect(text)
+        
+        lang_map = {
+            'hi': 'hi-IN', 'en': 'en-IN', 'bn': 'bn-IN', 'kn': 'kn-IN',
+            'ml': 'ml-IN', 'mr': 'mr-IN', 'pa': 'pa-IN', 'ta': 'ta-IN',
+            'te': 'te-IN', 'gu': 'gu-IN', 'or': 'od-IN',
+            'id': 'hi-IN', 'so': 'hi-IN', 'tl': 'hi-IN', 'fi': 'en-IN',
+        }
+        
+        return lang_map.get(detected_iso, "en-IN")
+    except Exception:
+        return "en-IN"
+
 
 class TTSPipeline:
     def __init__(self):
@@ -46,60 +91,13 @@ class TTSPipeline:
 
         # ── Language Detection ──────────────────────────────────────────────
         global DEFAULT_LANGUAGE
-        try:
-            detected_lang_code = None
+        detected_lang = detect_language_code(text)
+        if detected_lang:
+            if detected_lang != DEFAULT_LANGUAGE:
+                logger.info(f"Language switch detected: changing DEFAULT_LANGUAGE from {DEFAULT_LANGUAGE} to {detected_lang}")
+                DEFAULT_LANGUAGE = detected_lang
+            language_code = detected_lang
 
-            # 1. Native Character Precedence
-            # If the LLM generates a bilingual sentence (e.g., Tamil + English), 
-            # English TTS ('en-IN') will completely SKIP the Tamil characters.
-            # However, regional TTS ('ta-IN') can perfectly read BOTH Tamil AND English.
-            if any('\u0B80' <= c <= '\u0BFF' for c in text): detected_lang_code = 'ta-IN'
-            elif any('\u0900' <= c <= '\u097F' for c in text): detected_lang_code = 'hi-IN'
-            elif any('\u0C00' <= c <= '\u0C7F' for c in text): detected_lang_code = 'te-IN'
-            elif any('\u0980' <= c <= '\u09FF' for c in text): detected_lang_code = 'bn-IN'
-            elif any('\u0C80' <= c <= '\u0CFF' for c in text): detected_lang_code = 'kn-IN'
-            elif any('\u0D00' <= c <= '\u0D7F' for c in text): detected_lang_code = 'ml-IN'
-            elif any('\u0A80' <= c <= '\u0AFF' for c in text): detected_lang_code = 'gu-IN'
-            elif any('\u0B00' <= c <= '\u0B7F' for c in text): detected_lang_code = 'od-IN'
-            elif any('\u0A00' <= c <= '\u0A7F' for c in text): detected_lang_code = 'pa-IN'
-
-            if detected_lang_code:
-                logger.info(f"Native script detected: enforcing TTS language {detected_lang_code}")
-                if detected_lang_code != DEFAULT_LANGUAGE:
-                    DEFAULT_LANGUAGE = detected_lang_code
-                language_code = detected_lang_code
-            else:
-                # 2. Latin Script Fallback (English / Hinglish / Tanglish)
-                from langdetect import detect
-                
-                # Simple heuristic for Romanized Hindi (Hinglish)
-                hinglish_words = {'hai','hain','ki','ko','se','aur','mein','ka','ke','kya','aap','nahi','yeh','woh','karo','kar','raha','rahi','hoon','hu','mera','tum','tumhara','kaise','bukhar','kripya','bataiye','madad'}
-                words = set(text.lower().replace(',','').replace('?','').replace('.','').split())
-                if len(words.intersection(hinglish_words)) >= 2:
-                    detected_iso = 'hi'
-                else:
-                    detected_iso = detect(text)
-                
-                lang_map = {
-                    'hi': 'hi-IN', 'en': 'en-IN', 'bn': 'bn-IN', 'kn': 'kn-IN',
-                    'ml': 'ml-IN', 'mr': 'mr-IN', 'pa': 'pa-IN', 'ta': 'ta-IN',
-                    'te': 'te-IN', 'gu': 'gu-IN', 'or': 'od-IN',
-                    'id': 'hi-IN', 'so': 'hi-IN', 'tl': 'hi-IN', 'fi': 'en-IN',
-                }
-                
-                if detected_iso in lang_map:
-                    new_lang = lang_map[detected_iso]
-                    if new_lang != DEFAULT_LANGUAGE:
-                        logger.info(f"Language auto-detected: {detected_iso} -> changing DEFAULT_LANGUAGE from {DEFAULT_LANGUAGE} to {new_lang}")
-                        DEFAULT_LANGUAGE = new_lang
-                    language_code = new_lang
-                else:
-                    logger.info(f"Language '{detected_iso}' not in map. Using DEFAULT_LANGUAGE: {DEFAULT_LANGUAGE}")
-                    language_code = DEFAULT_LANGUAGE or "en-IN"
-                
-        except Exception as e:
-            logger.warning(f"Language detection failed. Defaulting to {DEFAULT_LANGUAGE}. Error: {e}")
-            language_code = DEFAULT_LANGUAGE or "en-IN"
 
         # If it was originally passed as None (from default arg) and detection completely failed
         if not language_code:

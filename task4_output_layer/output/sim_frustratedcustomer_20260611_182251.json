@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "timestamp": "20260611_182251",
+    "persona": {
+      "name": "Raju Sharma",
+      "language": "hinglish",
+      "mood": "frustrated",
+      "dialect": "Hinglish (Hindi + English mix)",
+      "description": "Angry bank customer tired of collection calls",
+      "turn_count": 4,
+      "escalation_level": 0
+    },
+    "total_turns": 4
+  },
+  "transcript": [
+    {
+      "role": "AI",
+      "text": "Namaste sir. Main ABC Bank se bol raha hoon. Aapka credit card payment pending hai.",
+      "turn": 1
+    },
+    {
+      "role": "Customer",
+      "text": "Hello... dekho mujhe bahut kaam hai, jaldi bolo.",
+      "mood": "frustrated",
+      "escalation_level": 0,
+      "turn": 1
+    },
+    {
+      "role": "AI",
+      "text": "Sir, aap gussa mat hoiye. Hum solution nikalne ke liye hi call kar rahe hain.",
+      "turn": 2
+    },
+    {
+      "role": "Customer",
+      "text": "Meri wife se baat karo, mujhe nahi pata ye sab.",
+      "mood": "frustrated",
+      "escalation_level": 0,
+      "turn": 2
+    },
+    {
+      "role": "AI",
+      "text": "Sir, agar abhi payment nahi ho pa rahi, toh hum EMI freeze ya restructuring option dekh sakte hain. Kya main details batau?",
+      "turn": 3
+    },
+    {
+      "role": "Customer",
+      "text": "Yaar tum log samajhte kyu nahi? Job chali gayi meri!",
+      "mood": "frustrated",
+      "escalation_level": 0,
+      "turn": 3
+    },
+    {
+      "role": "AI",
+      "text": "Sir, agar abhi payment nahi ho pa rahi, toh hum EMI freeze ya restructuring option dekh sakte hain. Kya main details batau?",
+      "turn": 4
+    },
+    {
+      "role": "Customer",
+      "text": "Kya bakwas hai ye! EMI EMI EMI... aur kuch puchna hai?",
+      "mood": "frustrated",
+      "escalation_level": 0,
+      "turn": 4
+    }
+  ]
+}
